@@ -1,83 +1,299 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mi Geoportal - Bienvenida</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            margin: 0;
-            padding: 0;
-            min-height: 100vh;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-        }
-        
-        .container {
-            background: white;
-            padding: 40px;
-            border-radius: 15px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
-            text-align: center;
-            max-width: 500px;
-            margin: 20px;
-        }
-        
-        h1 {
-            color: #333;
-            font-size: 2.5em;
-            margin-bottom: 20px;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
-        }
-        
-        .subtitle {
-            color: #666;
-            font-size: 1.2em;
-            margin-bottom: 30px;
-            line-height: 1.6;
-        }
-        
-        .map-icon {
-            font-size: 4em;
-            color: #667eea;
-            margin-bottom: 20px;
-        }
-        
-        .welcome-text {
-            background: #f8f9fa;
-            padding: 20px;
-            border-radius: 10px;
-            border-left: 4px solid #667eea;
-            margin-top: 20px;
-        }
-        
-        .footer {
-            margin-top: 30px;
-            color: #888;
-            font-size: 0.9em;
-        }
-    </style>
+  <meta charset="UTF-8" />
+  <title>Mapa Supabase con Capas Vectoriales Personalizadas</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.css"/>
+  <style>
+    body { font-family: 'Segoe UI', sans-serif; max-width:1100px; margin:20px auto; padding:0 15px; background:#f4f6f8; color:#212529; }
+    h1 { text-align:center; margin-bottom:20px; color:#4361ee; }
+    .tabs { display:flex; border-bottom:3px solid #4361ee; margin-bottom:15px; user-select:none; }
+    .tab { padding:12px 22px; cursor:pointer; background:#e9ecef; border-radius:10px; margin-right:5px; font-weight:600; color:#4361ee; }
+    .tab.active { background:#4361ee; color:#fff; font-weight:700; box-shadow:0 3px 7px rgba(67,97,238,.6); }
+    .tab-content { display:none; background:#fff; padding:18px; border-radius:0 10px 10px; box-shadow:0 2px 7px rgba(0,0,0,.12); min-height:180px; margin-bottom:20px; }
+    .tab-content.active { display:block; }
+    label { font-weight:600; margin-top:12px; display:block; }
+    input, button { width:100%; font-size:16px; }
+    input { padding:9px; border:1px solid #ccc; border-radius:8px; margin-top:6px; transition:border-color .2s; }
+    input:focus { border-color:#4361ee; box-shadow:0 0 8px rgba(67,97,238,.3); }
+    button { margin-top:18px; background:#4361ee; color:#fff; border:none; border-radius:10px; padding:13px 0; font-size:18px; font-weight:700; cursor:pointer; }
+    button:disabled { background:#a2a8d3; }
+    #tablesList { max-height:280px; overflow-y:auto; border:1px solid #ccc; border-radius:8px; background:#fafafa; margin-top:10px; }
+    .table-item { padding:10px 15px; border-bottom:1px solid #eee; display:flex; justify-content:space-between; align-items:center; color:#4361ee; font-weight:600; user-select:none; cursor:pointer; }
+    .table-item input { transform: scale(1.1); margin-left:10px; }
+    #coordinatesOutput, #measurementsOutput { margin-top:12px; background:#e9ecef; border:1px solid #ccc; border-radius:8px; padding:12px; font-size:15px; white-space:pre-wrap; max-height:150px; overflow-y:auto; }
+    #map { height:600px; border:2px solid #4361ee; border-radius:15px; box-shadow:0 5px 15px rgba(67,97,238,.35); margin-bottom:40px; }
+    #tablesList::-webkit-scrollbar { width:9px; }
+    #tablesList::-webkit-scrollbar-thumb { background:#4361ee; border-radius:8px; }
+
+    /* Leyenda compacta */
+    .leaflet-control-layers { font-size:12px !important; padding:2px !important; }
+    .leaflet-control-layers-overlays label { margin:0 !important; line-height:1.1 !important; }
+
+    /* Estilo para tooltip de medición */
+    .leaflet-draw-tooltip-measure {
+      background-color: rgba(67, 97, 238, 0.9);
+      color: white;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-weight: 600;
+      pointer-events: none;
+      white-space: nowrap;
+    }
+  </style>
 </head>
 <body>
-    <div class="container">
-        <div class="map-icon">🗺️</div>
-        <h1>¡Hola Mundo!</h1>
-        <div class="subtitle">
-            Un saludo <strong>Espacial</strong>
-        </div>
-        
-        <div class="welcome-text">
-            <p>👋 ¡Saludos desde Ecuador! </p>
-            <p>Este es mi geoportal donde trabajo con datos espaciales, mapas interactivos y análisis geográfico.</p>
-            <p>🌍 Explorando el mundo a través de la geografía y los SIG</p>
-        </div>
-        
-        <div class="footer">
-            <p>Desarrollado con PostGIS y mucho ☕</p>
-        </div>
-    </div>
+  <h1>Junta Comunitaria de Riego Ishigto</h1>
+  <div class="tabs">
+    <div class="tab active" data-tab="config">Configuración</div>
+    <div class="tab" data-tab="tables">Sistema de distribución</div>
+    <div class="tab" data-tab="coords">Coordenadas</div>
+    <div class="tab" data-tab="measure">Mediciones</div>
+  </div>
+
+  <section id="config" class="tab-content active">
+    <label>Supabase URL:</label><input id="supabaseUrl" type="url" placeholder="https://tuproject.supabase.co">
+    <label>Supabase API Key:</label><input id="supabaseKey" type="password">
+    <button id="connectBtn">Conectar</button>
+    <div id="statusMsg" style="margin-top:12px;font-weight:600;min-height:24px;"></div>
+  </section>
+
+  <section id="tables" class="tab-content">
+    <label>Selecciona capas:</label>
+    <div id="tablesList">Conéctate primero para ver tablas...</div>
+    <button id="loadLayerBtn" disabled>Cargar capas seleccionadas</button>
+  </section>
+
+  <section id="coords" class="tab-content">
+    <p>Haz clic en el mapa:</p>
+    <pre id="coordinatesOutput">Ningún punto seleccionado aún.</pre>
+  </section>
+
+  <section id="measure" class="tab-content">
+    <p>Mediciones de capas visibles:</p>
+    <div id="measurementsOutput">No hay capas visibles.</div>
+  </section>
+
+  <div id="map"></div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@turf/turf@6/turf.min.js"></script>
+  <script>
+    const colors = ['#e41a1c','#377eb8','#4daf4a','#984ea3','#ff7f00','#ffff33'];
+    let supabaseClient = null, map, vectorLayers = {}, layerControl;
+    let drawControl, drawnItems;
+
+    function initMap(){
+      const osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© OpenStreetMap'});
+      const sat = L.tileLayer('https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {attribution:'© Esri', maxZoom:20});
+      map = L.map('map',{center:[20,0],zoom:2,layers:[osm]});
+      layerControl = L.control.layers({'Base':osm,'Satélite':sat}, {}, {position:'topright',collapsed:false}).addTo(map);
+
+      // Capa para dibujos
+      drawnItems = new L.FeatureGroup();
+      map.addLayer(drawnItems);
+
+      // Control de dibujo
+      drawControl = new L.Control.Draw({
+        edit: { featureGroup: drawnItems },
+        draw: {
+          polygon: { allowIntersection: false, showArea: false },
+          polyline: true,
+          rectangle: false,
+          circle: false,
+          marker: false,
+          circlemarker: false
+        }
+      });
+      map.addControl(drawControl);
+
+      // Evento click mapa para mostrar coordenadas
+      map.on('click',e=>{
+        document.getElementById('coordinatesOutput').textContent = `Lat: ${e.latlng.lat.toFixed(6)}  Lng: ${e.latlng.lng.toFixed(6)}`;
+      });
+      map.on('overlayadd overlayremove', calculateMeasurements);
+
+      // Evento para añadir geometrías dibujadas a la capa y actualizar mediciones
+      map.on(L.Draw.Event.CREATED, e => {
+        drawnItems.addLayer(e.layer);
+        calculateMeasurements();
+      });
+
+      // Variables para tooltip de medición dinámica
+      let measureTooltip;
+      let measureTooltipElement;
+
+      function createMeasureTooltip() {
+        if (measureTooltipElement) {
+          measureTooltipElement.parentNode.removeChild(measureTooltipElement);
+        }
+        measureTooltipElement = document.createElement('div');
+        measureTooltipElement.className = 'leaflet-draw-tooltip leaflet-draw-tooltip-measure';
+        measureTooltip = new L.Tooltip(map);
+        measureTooltip.setContent(measureTooltipElement);
+        measureTooltip.addTo(map);
+      }
+
+      function updateMeasureTooltip(layer) {
+        let text = '';
+        const geojson = layer.toGeoJSON();
+        try {
+          if (geojson.geometry.type === 'Polygon' || geojson.geometry.type === 'MultiPolygon') {
+            const area = turf.area(geojson);
+            text = area >= 1e6 ? (area / 1e6).toFixed(3) + ' km²' : area.toFixed(1) + ' m²';
+          } else if (geojson.geometry.type === 'LineString' || geojson.geometry.type === 'MultiLineString') {
+            const length = turf.length(geojson, { units: 'meters' });
+            text = length >= 1000 ? (length / 1000).toFixed(3) + ' km' : length.toFixed(1) + ' m';
+          }
+        } catch {
+          text = '';
+        }
+        measureTooltipElement.innerHTML = text;
+      }
+
+      // Mostrar medición mientras se dibuja
+      map.on(L.Draw.Event.DRAWSTART, e => {
+        createMeasureTooltip();
+        let layer = null;
+
+        function onDrawVertex(ev) {
+          layer = ev.layers.getLayers()[0];
+          if (layer) updateMeasureTooltip(layer);
+        }
+
+        map.on('draw:drawvertex', onDrawVertex);
+
+        map.once(L.Draw.Event.DRAWSTOP, () => {
+          if (measureTooltipElement) {
+            measureTooltipElement.parentNode.removeChild(measureTooltipElement);
+            measureTooltipElement = null;
+            measureTooltip = null;
+          }
+          map.off('draw:drawvertex', onDrawVertex);
+        });
+      });
+    }
+
+    function showStatus(msg,err=false){
+      const el = document.getElementById('statusMsg');
+      el.textContent = msg;
+      el.style.color = err ? '#d90429': '#4361ee';
+    }
+
+    async function connectSupabase(){
+      const url = document.getElementById('supabaseUrl').value.trim();
+      const key = document.getElementById('supabaseKey').value.trim();
+      if(!url||!key) return showStatus('URL y API Key son requeridos', true);
+      showStatus('Conectando...');
+      document.getElementById('connectBtn').disabled = true;
+      try {
+        supabaseClient = supabase.createClient(url, key);
+        const {data, error} = await supabaseClient.rpc('list_tables');
+        if(error) throw error;
+        if(!data?.length) throw new Error('No se encontraron tablas');
+        showStatus('Conexión exitosa');
+        populateTablesList(data.map(t=>t.name));
+        document.querySelector('.tab[data-tab="tables"]').click();
+      } catch(e){
+        showStatus('Error: ' + e.message, true);
+      } finally{
+        document.getElementById('connectBtn').disabled = false;
+      }
+    }
+
+    function populateTablesList(tables){
+      const c = document.getElementById('tablesList');
+      c.innerHTML = '';
+      tables.forEach((n,i)=>{
+        const d = document.createElement('div');
+        d.className = 'table-item';
+        const s = document.createElement('span'); s.textContent = n;
+        const cb = document.createElement('input');
+        cb.type = 'checkbox'; cb.value = n; cb.onchange = updateLoadBtn;
+        d.append(s, cb);
+        c.append(d);
+      });
+    }
+
+    function updateLoadBtn(){
+      const any = Array.from(document.querySelectorAll('#tablesList input')).some(cb=>cb.checked);
+      document.getElementById('loadLayerBtn').disabled = !any;
+    }
+
+    async function loadLayers(){
+      const sel = Array.from(document.querySelectorAll('#tablesList input:checked')).map(cb=>cb.value);
+      if(!sel.length||!supabaseClient) return;
+      for(const [idx,name] of sel.map((n,i)=>[i,n])){
+        if(vectorLayers[name]) continue;
+        const {data, error} = await supabaseClient.from(name).select('*').limit(500);
+        if(error) { console.error(error); continue; }
+        const feats = data.map(r=>{
+          const k = Object.keys(r).find(k=>/geom|geometry/i.test(k));
+          if(!k) return null;
+          const geom = typeof r[k]==='string'? JSON.parse(r[k]):r[k];
+          if(!geom) return null;
+          const props = {...r}; delete props[k];
+          return {type:'Feature',properties:props,geometry:geom};
+        }).filter(Boolean);
+
+        const col = colors[idx % colors.length];
+        const layer = L.geoJSON({type:'FeatureCollection',features:feats}, {
+          style:()=>({color:col,weight:3,opacity:0.7,fillOpacity:0.2}),
+          pointToLayer:(f,latlng)=>L.circleMarker(latlng,{radius:7,fillColor:col,color:'#fff',weight:1.5,fillOpacity:0.8}),
+          onEachFeature:(f,l)=>l.bindPopup(Object.entries(f.properties)
+            .map(([k,v])=>`<b>${k}:</b> ${v}`).join('<br/>'))
+        });
+
+        vectorLayers[name] = layer;
+        layer.addTo(map);
+        layerControl.addOverlay(layer, name);
+        try { map.fitBounds(layer.getBounds(),{padding:[20,20]}); } catch(e){}
+      }
+      calculateMeasurements();
+    }
+
+    function calculateMeasurements(){
+      const out = [];
+      // Incluimos también los dibujos manuales (drawnItems)
+      const layersToMeasure = {...vectorLayers};
+      if(drawnItems.getLayers().length > 0){
+        layersToMeasure['Dibujos'] = drawnItems;
+      }
+
+      for(const [name, layer] of Object.entries(layersToMeasure)){
+        if(!map.hasLayer(layer)) continue;
+        let area=0, length=0, points=0;
+        const seen = new Set();
+        layer.toGeoJSON().features.forEach(f=>{
+          const id = JSON.stringify(f.geometry)+JSON.stringify(f.properties);
+          if(seen.has(id)) return;
+          seen.add(id);
+          try{
+            const t = f.geometry.type;
+            if(/Polygon/i.test(t)){ area+=turf.area(f); length+=turf.length(f,{units:'meters'}); }
+            else if(/LineString/i.test(t)){ length+=turf.length(f,{units:'meters'}); }
+            else if(/Point/i.test(t)){ points+= t==='Point'?1:f.geometry.coordinates.length; }
+          }catch{}
+        });
+        if(points) out.push(`Puntos: ${points}  [${name}]`);
+        if(area) out.push(`${area >= 1e6 ? (area/1e6).toFixed(3)+' km²' : area.toFixed(1)+' m²'}  [${name}]`);
+        if(length) out.push(`${length>=1000 ? (length/1000).toFixed(3)+' km' : length.toFixed(1)+' m'}  [${name}]`);
+      }
+      document.getElementById('measurementsOutput').textContent = out.join('\n') || 'No hay capas visibles.';
+    }
+
+    document.getElementById('connectBtn').addEventListener('click', connectSupabase);
+    document.getElementById('loadLayerBtn').addEventListener('click', loadLayers);
+    document.querySelectorAll('.tab').forEach(t=>t.addEventListener('click',()=>{
+      document.querySelectorAll('.tab,.tab-content').forEach(e=>e.classList.remove('active'));
+      t.classList.add('active');
+      document.getElementById(t.dataset.tab).classList.add('active');
+    }));
+
+    initMap();
+  </script>
 </body>
 </html>
