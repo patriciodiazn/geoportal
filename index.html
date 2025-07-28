@@ -2,298 +2,1455 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
-  <title>Mapa Supabase con Capas Vectoriales Personalizadas</title>
+  <title>Geoportal - Junta Comunitaria de Riego Ishigto</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.css"/>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"/>
   <style>
-    body { font-family: 'Segoe UI', sans-serif; max-width:1100px; margin:20px auto; padding:0 15px; background:#f4f6f8; color:#212529; }
-    h1 { text-align:center; margin-bottom:20px; color:#4361ee; }
-    .tabs { display:flex; border-bottom:3px solid #4361ee; margin-bottom:15px; user-select:none; }
-    .tab { padding:12px 22px; cursor:pointer; background:#e9ecef; border-radius:10px; margin-right:5px; font-weight:600; color:#4361ee; }
-    .tab.active { background:#4361ee; color:#fff; font-weight:700; box-shadow:0 3px 7px rgba(67,97,238,.6); }
-    .tab-content { display:none; background:#fff; padding:18px; border-radius:0 10px 10px; box-shadow:0 2px 7px rgba(0,0,0,.12); min-height:180px; margin-bottom:20px; }
-    .tab-content.active { display:block; }
-    label { font-weight:600; margin-top:12px; display:block; }
-    input, button { width:100%; font-size:16px; }
-    input { padding:9px; border:1px solid #ccc; border-radius:8px; margin-top:6px; transition:border-color .2s; }
-    input:focus { border-color:#4361ee; box-shadow:0 0 8px rgba(67,97,238,.3); }
-    button { margin-top:18px; background:#4361ee; color:#fff; border:none; border-radius:10px; padding:13px 0; font-size:18px; font-weight:700; cursor:pointer; }
-    button:disabled { background:#a2a8d3; }
-    #tablesList { max-height:280px; overflow-y:auto; border:1px solid #ccc; border-radius:8px; background:#fafafa; margin-top:10px; }
-    .table-item { padding:10px 15px; border-bottom:1px solid #eee; display:flex; justify-content:space-between; align-items:center; color:#4361ee; font-weight:600; user-select:none; cursor:pointer; }
-    .table-item input { transform: scale(1.1); margin-left:10px; }
-    #coordinatesOutput, #measurementsOutput { margin-top:12px; background:#e9ecef; border:1px solid #ccc; border-radius:8px; padding:12px; font-size:15px; white-space:pre-wrap; max-height:150px; overflow-y:auto; }
-    #map { height:600px; border:2px solid #4361ee; border-radius:15px; box-shadow:0 5px 15px rgba(67,97,238,.35); margin-bottom:40px; }
-    #tablesList::-webkit-scrollbar { width:9px; }
-    #tablesList::-webkit-scrollbar-thumb { background:#4361ee; border-radius:8px; }
-
+    :root {
+      --primary-color: #4361ee;
+      --primary-light: #e9ecef;
+      --secondary-color: #3a0ca3;
+      --success-color: #2b9348;
+      --warning-color: #f77f00;
+      --danger-color: #d90429;
+      --light-color: #f8f9fa;
+      --dark-color: #212529;
+      --gray-color: #6c757d;
+    }
+    
+    body { 
+      font-family: 'Segoe UI', sans-serif; 
+      max-width:1200px; 
+      margin:20px auto; 
+      padding:0 20px; 
+      background:#f4f6f8; 
+      color:var(--dark-color); 
+      line-height:1.6;
+    }
+    
+    h1 { 
+      text-align:center; 
+      margin-bottom:25px; 
+      color:var(--primary-color); 
+      font-size:2rem;
+      text-shadow: 1px 1px 2px rgba(0,0,0,0.1);
+    }
+    
+    .tabs { 
+      display:flex; 
+      flex-wrap: wrap;
+      border-bottom:3px solid var(--primary-color); 
+      margin-bottom:20px; 
+      user-select:none; 
+      gap:5px;
+    }
+    
+    .tab { 
+      padding:12px 22px; 
+      cursor:pointer; 
+      background:var(--primary-light); 
+      border-radius:10px 10px 0 0; 
+      font-weight:600; 
+      color:var(--primary-color);
+      transition: all 0.3s ease;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    
+    .tab:hover {
+      background: #d0d7ff;
+    }
+    
+    .tab.active { 
+      background:var(--primary-color); 
+      color:#fff; 
+      font-weight:700; 
+      box-shadow:0 3px 7px rgba(67,97,238,.3); 
+    }
+    
+    .tab-content { 
+      display:none; 
+      background:#fff; 
+      padding:20px; 
+      border-radius:0 10px 10px 10px; 
+      box-shadow:0 2px 10px rgba(0,0,0,.1); 
+      min-height:200px; 
+      margin-bottom:25px; 
+    }
+    
+    .tab-content.active { 
+      display:block; 
+      animation: fadeIn 0.3s ease-in-out;
+    }
+    
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(5px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    
+    label { 
+      font-weight:600; 
+      margin-top:15px; 
+      display:block; 
+      color:var(--dark-color);
+    }
+    
+    input, select, button, textarea { 
+      width:100%; 
+      font-size:16px; 
+      box-sizing: border-box;
+    }
+    
+    input, select { 
+      padding:10px; 
+      border:1px solid #ced4da; 
+      border-radius:8px; 
+      margin-top:8px; 
+      transition:all 0.3s;
+    }
+    
+    input:focus, select:focus { 
+      border-color:var(--primary-color); 
+      box-shadow:0 0 8px rgba(67,97,238,.2); 
+      outline:none;
+    }
+    
+    button { 
+      margin-top:20px; 
+      background:var(--primary-color); 
+      color:#fff; 
+      border:none; 
+      border-radius:10px; 
+      padding:14px 0; 
+      font-size:17px; 
+      font-weight:600; 
+      cursor:pointer;
+      transition: all 0.3s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+    
+    button:hover {
+      background: var(--secondary-color);
+      transform: translateY(-2px);
+      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
+    
+    button:disabled { 
+      background:#adb5bd; 
+      cursor:not-allowed;
+      transform: none;
+      box-shadow: none;
+    }
+    
+    button.success {
+      background: var(--success-color);
+    }
+    
+    button.warning {
+      background: var(--warning-color);
+    }
+    
+    button.danger {
+      background: var(--danger-color);
+    }
+    
+    #tablesList, #reportsList, #searchResultsList { 
+      max-height:300px; 
+      overflow-y:auto; 
+      border:1px solid #ced4da; 
+      border-radius:8px; 
+      background:#fafafa; 
+      margin-top:10px; 
+    }
+    
+    .table-item, .report-item, .search-result-item { 
+      padding:12px 15px; 
+      border-bottom:1px solid #eee; 
+      display:flex; 
+      justify-content:space-between; 
+      align-items:center; 
+      color:var(--primary-color); 
+      font-weight:600; 
+      user-select:none; 
+      cursor:pointer;
+      transition: background 0.2s;
+    }
+    
+    .table-item:hover, .report-item:hover, .search-result-item:hover {
+      background: #f1f3ff;
+    }
+    
+    .table-item input, .search-result-item input { 
+      transform: scale(1.1); 
+      margin-left:10px; 
+      cursor:pointer;
+    }
+    
+    #coordinatesOutput, #measurementsOutput { 
+      margin-top:12px; 
+      background:var(--primary-light); 
+      border:1px solid #ced4da; 
+      border-radius:8px; 
+      padding:15px; 
+      font-size:15px; 
+      white-space:pre-wrap; 
+      max-height:200px; 
+      overflow-y:auto;
+      line-height: 1.5;
+    }
+    
+    #map { 
+      height:650px; 
+      border:2px solid var(--primary-color); 
+      border-radius:15px; 
+      box-shadow:0 5px 15px rgba(67,97,238,.2); 
+      margin-bottom:40px;
+    }
+    
+    #tablesList::-webkit-scrollbar, #reportsList::-webkit-scrollbar, #searchResultsList::-webkit-scrollbar { 
+      width:8px; 
+    }
+    
+    #tablesList::-webkit-scrollbar-thumb, #reportsList::-webkit-scrollbar-thumb, #searchResultsList::-webkit-scrollbar-thumb { 
+      background:var(--primary-color); 
+      border-radius:8px; 
+    }
+    
     /* Leyenda compacta */
-    .leaflet-control-layers { font-size:12px !important; padding:2px !important; }
-    .leaflet-control-layers-overlays label { margin:0 !important; line-height:1.1 !important; }
+    .leaflet-control-layers { 
+      font-size:12px !important; 
+      padding:5px !important; 
+      border-radius:8px !important;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1) !important;
+    }
+    
+    .leaflet-control-layers-overlays label { 
+      margin:0 !important; 
+      line-height:1.3 !important; 
+      padding:3px 0 !important;
+      display: flex !important;
+      align-items: center;
+      gap: 5px;
+    }
+    
+    .leaflet-control-layers-overlays input {
+      margin-top: 0 !important;
+    }
 
     /* Estilo para tooltip de medición */
     .leaflet-draw-tooltip-measure {
       background-color: rgba(67, 97, 238, 0.9);
       color: white;
-      padding: 4px 8px;
-      border-radius: 4px;
+      padding: 6px 10px;
+      border-radius: 6px;
       font-weight: 600;
       pointer-events: none;
       white-space: nowrap;
+      font-size: 14px;
+    }
+    
+    /* Estilos para los reportes */
+    .report-status {
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+    
+    .status-pending {
+      background: #fff3bf;
+      color: #e67700;
+    }
+    
+    .status-in-progress {
+      background: #d0ebff;
+      color: #1971c2;
+    }
+    
+    .status-solved {
+      background: #d3f9d8;
+      color: #2b8a3e;
+    }
+    
+    /* Estilos para la búsqueda */
+    .search-container {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 15px;
+    }
+    
+    .search-container input {
+      flex: 1;
+    }
+    
+    .search-container button {
+      margin-top: 8px;
+      width: auto;
+      padding: 10px 15px;
+    }
+    
+    /* Estilos para las descargas */
+    .download-options {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 15px;
+    }
+    
+    .download-options button {
+      margin-top: 0;
+      padding: 10px 15px;
+      width: auto;
+      font-size: 14px;
+    }
+    
+    /* Notificaciones */
+    .notification {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      padding: 15px 20px;
+      border-radius: 8px;
+      color: white;
+      font-weight: 600;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      z-index: 1000;
+      animation: slideIn 0.3s ease-out;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    
+    @keyframes slideIn {
+      from { transform: translateX(100%); opacity: 0; }
+      to { transform: translateX(0); opacity: 1; }
+    }
+    
+    .notification.success {
+      background: var(--success-color);
+    }
+    
+    .notification.error {
+      background: var(--danger-color);
+    }
+    
+    .notification.warning {
+      background: var(--warning-color);
+    }
+    
+    /* Estilos para el modal de reportes */
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.5);
+      z-index: 2000;
+      justify-content: center;
+      align-items: center;
+    }
+    
+    .modal-content {
+      background: white;
+      padding: 25px;
+      border-radius: 10px;
+      width: 90%;
+      max-width: 600px;
+      max-height: 80vh;
+      overflow-y: auto;
+      box-shadow: 0 5px 20px rgba(0,0,0,0.2);
+    }
+    
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid #eee;
+    }
+    
+    .modal-title {
+      font-size: 1.5rem;
+      color: var(--primary-color);
+      margin: 0;
+    }
+    
+    .close-modal {
+      background: none;
+      border: none;
+      font-size: 1.5rem;
+      cursor: pointer;
+      color: var(--gray-color);
+    }
+    
+    .report-details {
+      margin-bottom: 20px;
+    }
+    
+    .report-detail {
+      margin-bottom: 10px;
+    }
+    
+    .report-detail label {
+      font-weight: bold;
+      display: block;
+      margin-bottom: 5px;
+    }
+    
+    .report-detail p {
+      margin: 0;
+      padding: 8px;
+      background: #f8f9fa;
+      border-radius: 5px;
+    }
+    
+    /* Estilos para coordenadas */
+    .coordinate-system-options {
+      margin-top: 15px;
+      padding: 15px;
+      background: #f8f9fa;
+      border-radius: 8px;
+    }
+    
+    .coordinate-system-options label {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 10px;
+      cursor: pointer;
+    }
+    
+    .coordinate-system-options input {
+      width: auto;
+      margin-top: 0;
+    }
+    
+    .coords-display-options {
+      margin-top: 15px;
+      padding: 15px;
+      background: #f8f9fa;
+      border-radius: 8px;
+    }
+    
+    .coords-display-options label {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 10px;
+      cursor: pointer;
+    }
+    
+    .coords-display-options input {
+      width: auto;
+      margin-top: 0;
     }
   </style>
 </head>
 <body>
-  <h1>Junta Comunitaria de Riego Ishigto</h1>
+  <h1><i class="fas fa-water"></i> Junta Comunitaria de Riego Ishigto</h1>
   <div class="tabs">
-    <div class="tab active" data-tab="config">Configuración</div>
-    <div class="tab" data-tab="tables">Sistema de distribución</div>
-    <div class="tab" data-tab="coords">Coordenadas</div>
-    <div class="tab" data-tab="measure">Mediciones</div>
+    <div class="tab" data-tab="config"><i class="fas fa-cog"></i> Configuración</div>
+    <div class="tab active" data-tab="tables"><i class="fas fa-layer-group"></i> Sistema de distribución</div>
+    <div class="tab" data-tab="search"><i class="fas fa-search"></i> Buscar capa</div>
+    <div class="tab" data-tab="coords"><i class="fas fa-map-marker-alt"></i> Coordenadas</div>
+    <div class="tab" data-tab="measure"><i class="fas fa-ruler-combined"></i> Mediciones</div>
+    <div class="tab" data-tab="reports"><i class="fas fa-clipboard-list"></i> Reportes</div>
+    <div class="tab" data-tab="download"><i class="fas fa-download"></i> Descargas</div>
   </div>
 
-  <section id="config" class="tab-content active">
-    <label>Supabase URL:</label><input id="supabaseUrl" type="url" placeholder="https://tuproject.supabase.co">
-    <label>Supabase API Key:</label><input id="supabaseKey" type="password">
-    <button id="connectBtn">Conectar</button>
-    <div id="statusMsg" style="margin-top:12px;font-weight:600;min-height:24px;"></div>
+  <section id="config" class="tab-content">
+    <label><i class="fas fa-link"></i> Supabase URL:</label>
+    <input id="supabaseUrl" type="url" placeholder="https://tuproject.supabase.co" disabled>
+    
+    <label><i class="fas fa-key"></i> Supabase API Key:</label>
+    <input id="supabaseKey" type="password" placeholder="Clave de API" disabled>
+    
+    <button id="connectBtn" disabled><i class="fas fa-plug"></i> Conectado</button>
+    <div id="statusMsg" style="margin-top:15px;font-weight:600;min-height:24px;color:var(--success-color);">Conectado automáticamente a Supabase</div>
   </section>
 
-  <section id="tables" class="tab-content">
-    <label>Selecciona capas:</label>
-    <div id="tablesList">Conéctate primero para ver tablas...</div>
-    <button id="loadLayerBtn" disabled>Cargar capas seleccionadas</button>
+  <section id="tables" class="tab-content active">
+    <label><i class="fas fa-check-circle"></i> Selecciona capas:</label>
+    <div id="tablesList">Cargando tablas disponibles...</div>
+    <button id="loadLayerBtn" disabled><i class="fas fa-layer-group"></i> Cargar capas seleccionadas</button>
+  </section>
+
+  <section id="search" class="tab-content">
+    <div class="search-container">
+      <input id="searchInput" type="text" placeholder="Buscar capa por nombre..." autocomplete="off">
+      <button id="searchBtn"><i class="fas fa-search"></i> Buscar</button>
+    </div>
+    <label><i class="fas fa-list"></i> Resultados de búsqueda:</label>
+    <div id="searchResultsList">Ingresa un término de búsqueda para encontrar capas.</div>
+    <button id="loadSearchResultBtn" disabled><i class="fas fa-map-marked-alt"></i> Cargar capas seleccionadas</button>
   </section>
 
   <section id="coords" class="tab-content">
-    <p>Haz clic en el mapa:</p>
+    <p><i class="fas fa-mouse-pointer"></i> Haz clic en el mapa:</p>
+    <div class="coords-display-options">
+      <label><i class="fas fa-globe-americas"></i> Mostrar coordenadas en:</label>
+      <div>
+        <label>
+          <input type="radio" name="coordsDisplay" value="WGS84" checked> WGS84 (EPSG:4326)
+        </label>
+        <label>
+          <input type="radio" name="coordsDisplay" value="UTM"> UTM Zona 17S (EPSG:32717)
+        </label>
+      </div>
+    </div>
     <pre id="coordinatesOutput">Ningún punto seleccionado aún.</pre>
   </section>
 
   <section id="measure" class="tab-content">
-    <p>Mediciones de capas visibles:</p>
+    <p><i class="fas fa-ruler"></i> Mediciones de capas visibles:</p>
     <div id="measurementsOutput">No hay capas visibles.</div>
+    <div style="margin-top: 15px;">
+      <button id="measurePolygonBtn"><i class="fas fa-draw-polygon"></i> Medir área</button>
+      <button id="measureLineBtn"><i class="fas fa-ruler-horizontal"></i> Medir distancia</button>
+      <button id="clearMeasurementsBtn"><i class="fas fa-trash-alt"></i> Limpiar mediciones</button>
+    </div>
+    <div id="currentMeasurement" style="margin-top:15px; padding:10px; background:#f8f9fa; border-radius:8px; display:none;">
+      <strong>Medición actual:</strong> <span id="measurementValue">0 m²</span>
+    </div>
+  </section>
+
+  <section id="reports" class="tab-content">
+    <label><i class="fas fa-plus-circle"></i> Nuevo reporte:</label>
+    <input id="reportTitle" type="text" placeholder="Título del reporte">
+    <textarea id="reportDescription" placeholder="Descripción detallada del problema" style="width:100%; height:100px; margin-top:10px; padding:10px; border-radius:8px; border:1px solid #ced4da;"></textarea>
+    <select id="reportStatus" style="margin-top:10px;">
+      <option value="pending">Pendiente</option>
+      <option value="in_progress">En proceso</option>
+      <option value="solved">Solucionado</option>
+    </select>
+    <button id="addReportBtn" class="success"><i class="fas fa-plus"></i> Agregar reporte</button>
+    
+    <label style="margin-top:25px;"><i class="fas fa-list"></i> Reportes existentes:</label>
+    <div id="reportsList">No hay reportes registrados.</div>
+  </section>
+
+  <section id="download" class="tab-content">
+    <label><i class="fas fa-database"></i> Selecciona capa para descargar:</label>
+    <select id="downloadSelect" disabled>
+      <option value="">Cargando capas disponibles...</option>
+    </select>
+    
+    <div class="coordinate-system-options">
+      <label><i class="fas fa-globe-americas"></i> Sistema de coordenadas:</label>
+      <div>
+        <label>
+          <input type="radio" name="coordinateSystem" value="WGS84" checked> WGS84 (EPSG:4326)
+        </label>
+        <label>
+          <input type="radio" name="coordinateSystem" value="UTM"> UTM Zona 17S (EPSG:32717)
+        </label>
+      </div>
+    </div>
+    
+    <label style="margin-top:15px;"><i class="fas fa-file-export"></i> Formato de descarga:</label>
+    <div class="download-options">
+      <button id="downloadGeoJSON" disabled><i class="fas fa-file-code"></i> GeoJSON</button>
+      <button id="downloadCSV" disabled><i class="fas fa-file-csv"></i> CSV</button>
+      <button id="downloadKML" disabled><i class="fas fa-file-alt"></i> KML</button>
+      <button id="downloadSHP" disabled><i class="fas fa-file-archive"></i> Shapefile</button>
+    </div>
   </section>
 
   <div id="map"></div>
+
+  <!-- Modal para ver detalles del reporte -->
+  <div id="reportModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 class="modal-title">Detalles del Reporte</h3>
+        <button class="close-modal">&times;</button>
+      </div>
+      <div class="report-details">
+        <div class="report-detail">
+          <label>Título:</label>
+          <p id="modalReportTitle"></p>
+        </div>
+        <div class="report-detail">
+          <label>Descripción:</label>
+          <p id="modalReportDescription"></p>
+        </div>
+        <div class="report-detail">
+          <label>Estado:</label>
+          <p id="modalReportStatus"></p>
+        </div>
+        <div class="report-detail">
+          <label>Fecha:</label>
+          <p id="modalReportDate"></p>
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button id="editReportBtn" class="warning" style="margin-right:10px;"><i class="fas fa-edit"></i> Editar</button>
+        <button id="deleteReportBtn" class="danger"><i class="fas fa-trash"></i> Eliminar</button>
+      </div>
+    </div>
+  </div>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://cdn.jsdelivr.net/npm/@turf/turf@6/turf.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/proj4js/2.8.0/proj4.js"></script>
   <script>
+    // Definir la proyección UTM Zona 17S (EPSG:32717)
+    proj4.defs("EPSG:32717", "+proj=utm +zone=17 +south +ellps=WGS84 +datum=WGS84 +units=m +no_defs");
+    
     const colors = ['#e41a1c','#377eb8','#4daf4a','#984ea3','#ff7f00','#ffff33'];
     let supabaseClient = null, map, vectorLayers = {}, layerControl;
     let drawControl, drawnItems;
+    let measureControl, measureLayer;
+    let reports = JSON.parse(localStorage.getItem('reports')) || [];
+    let currentMeasureTool = null;
+    let currentReportId = null;
+
+    // Credenciales de Supabase predefinidas
+    const SUPABASE_URL = "https://occwdzimuymntcqudkhq.supabase.co";
+    const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9jY3dkemltdXltbnRjcXVka2hxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTEzMzEwODMsImV4cCI6MjA2NjkwNzA4M30.k8EAwbPzG4pJ0tmGq-Tqw152GtaWhpS-p16R6Bw2UWU";
 
     function initMap(){
-      const osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© OpenStreetMap'});
-      const sat = L.tileLayer('https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {attribution:'© Esri', maxZoom:20});
-      map = L.map('map',{center:[20,0],zoom:2,layers:[osm]});
-      layerControl = L.control.layers({'Base':osm,'Satélite':sat}, {}, {position:'topright',collapsed:false}).addTo(map);
+      const osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
+        attribution:'© OpenStreetMap',
+        maxZoom: 19
+      });
+      
+      const sat = L.tileLayer('https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+        attribution:'© Esri', 
+        maxZoom:20
+      });
+      
+      map = L.map('map',{
+        center:[-2.2, -78.5],
+        zoom:12,
+        layers:[osm],
+        zoomControl: false
+      });
+      
+      L.control.zoom({position: 'topright'}).addTo(map);
+      
+      layerControl = L.control.layers(
+        {'Base':osm, 'Satélite':sat}, 
+        {}, 
+        {position:'topright', collapsed:false}
+      ).addTo(map);
 
       // Capa para dibujos
       drawnItems = new L.FeatureGroup();
       map.addLayer(drawnItems);
 
-      // Control de dibujo
-      drawControl = new L.Control.Draw({
-        edit: { featureGroup: drawnItems },
-        draw: {
-          polygon: { allowIntersection: false, showArea: false },
-          polyline: true,
-          rectangle: false,
-          circle: false,
-          marker: false,
-          circlemarker: false
-        }
-      });
-      map.addControl(drawControl);
+      // Capa para mediciones
+      measureLayer = new L.FeatureGroup();
+      map.addLayer(measureLayer);
 
       // Evento click mapa para mostrar coordenadas
-      map.on('click',e=>{
-        document.getElementById('coordinatesOutput').textContent = `Lat: ${e.latlng.lat.toFixed(6)}  Lng: ${e.latlng.lng.toFixed(6)}`;
+      map.on('click', e => {
+        const coordsDisplay = document.querySelector('input[name="coordsDisplay"]:checked').value;
+        let lat = e.latlng.lat;
+        let lng = e.latlng.lng;
+        let coordText = '';
+        
+        if(coordsDisplay === 'WGS84') {
+          coordText = `Lat: ${lat.toFixed(6)}\nLng: ${lng.toFixed(6)}`;
+        } else {
+          // Convertir a UTM Zona 17S
+          const utm = proj4('EPSG:4326', 'EPSG:32717', [lng, lat]);
+          coordText = `Este: ${utm[0].toFixed(2)} m\nNorte: ${utm[1].toFixed(2)} m`;
+        }
+        
+        document.getElementById('coordinatesOutput').textContent = coordText;
       });
+      
       map.on('overlayadd overlayremove', calculateMeasurements);
-
-      // Evento para añadir geometrías dibujadas a la capa y actualizar mediciones
-      map.on(L.Draw.Event.CREATED, e => {
-        drawnItems.addLayer(e.layer);
-        calculateMeasurements();
-      });
-
-      // Variables para tooltip de medición dinámica
-      let measureTooltip;
-      let measureTooltipElement;
-
-      function createMeasureTooltip() {
-        if (measureTooltipElement) {
-          measureTooltipElement.parentNode.removeChild(measureTooltipElement);
-        }
-        measureTooltipElement = document.createElement('div');
-        measureTooltipElement.className = 'leaflet-draw-tooltip leaflet-draw-tooltip-measure';
-        measureTooltip = new L.Tooltip(map);
-        measureTooltip.setContent(measureTooltipElement);
-        measureTooltip.addTo(map);
-      }
-
-      function updateMeasureTooltip(layer) {
-        let text = '';
-        const geojson = layer.toGeoJSON();
-        try {
-          if (geojson.geometry.type === 'Polygon' || geojson.geometry.type === 'MultiPolygon') {
-            const area = turf.area(geojson);
-            text = area >= 1e6 ? (area / 1e6).toFixed(3) + ' km²' : area.toFixed(1) + ' m²';
-          } else if (geojson.geometry.type === 'LineString' || geojson.geometry.type === 'MultiLineString') {
-            const length = turf.length(geojson, { units: 'meters' });
-            text = length >= 1000 ? (length / 1000).toFixed(3) + ' km' : length.toFixed(1) + ' m';
-          }
-        } catch {
-          text = '';
-        }
-        measureTooltipElement.innerHTML = text;
-      }
-
-      // Mostrar medición mientras se dibuja
-      map.on(L.Draw.Event.DRAWSTART, e => {
-        createMeasureTooltip();
-        let layer = null;
-
-        function onDrawVertex(ev) {
-          layer = ev.layers.getLayers()[0];
-          if (layer) updateMeasureTooltip(layer);
-        }
-
-        map.on('draw:drawvertex', onDrawVertex);
-
-        map.once(L.Draw.Event.DRAWSTOP, () => {
-          if (measureTooltipElement) {
-            measureTooltipElement.parentNode.removeChild(measureTooltipElement);
-            measureTooltipElement = null;
-            measureTooltip = null;
-          }
-          map.off('draw:drawvertex', onDrawVertex);
-        });
-      });
     }
 
-    function showStatus(msg,err=false){
+    function showStatus(msg, err = false){
       const el = document.getElementById('statusMsg');
       el.textContent = msg;
-      el.style.color = err ? '#d90429': '#4361ee';
+      el.style.color = err ? 'var(--danger-color)' : 'var(--primary-color)';
+    }
+
+    function showNotification(message, type = 'success'){
+      const notification = document.createElement('div');
+      notification.className = `notification ${type}`;
+      notification.innerHTML = `<i class="fas fa-${type === 'error' ? 'exclamation-circle' : (type === 'warning' ? 'exclamation-triangle' : 'check-circle')}"></i> ${message}`;
+      document.body.appendChild(notification);
+      
+      setTimeout(() => {
+        notification.style.opacity = '0';
+        setTimeout(() => notification.remove(), 300);
+      }, 3000);
     }
 
     async function connectSupabase(){
-      const url = document.getElementById('supabaseUrl').value.trim();
-      const key = document.getElementById('supabaseKey').value.trim();
-      if(!url||!key) return showStatus('URL y API Key son requeridos', true);
-      showStatus('Conectando...');
-      document.getElementById('connectBtn').disabled = true;
       try {
-        supabaseClient = supabase.createClient(url, key);
+        showStatus('Conectando automáticamente...');
+        
+        // Establecer las credenciales en los campos (solo para visualización)
+        document.getElementById('supabaseUrl').value = SUPABASE_URL;
+        document.getElementById('supabaseKey').value = '••••••••••••••••••••••••••••••••';
+        
+        supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
         const {data, error} = await supabaseClient.rpc('list_tables');
+        
         if(error) throw error;
         if(!data?.length) throw new Error('No se encontraron tablas');
+        
         showStatus('Conexión exitosa');
-        populateTablesList(data.map(t=>t.name));
-        document.querySelector('.tab[data-tab="tables"]').click();
-      } catch(e){
+        showNotification('Conexión establecida con éxito');
+        
+        populateTablesList(data.map(t => t.name));
+        populateDownloadSelect(data.map(t => t.name));
+      } catch(e) {
         showStatus('Error: ' + e.message, true);
-      } finally{
-        document.getElementById('connectBtn').disabled = false;
+        showNotification('Error al conectar: ' + e.message, 'error');
       }
     }
 
     function populateTablesList(tables){
-      const c = document.getElementById('tablesList');
-      c.innerHTML = '';
-      tables.forEach((n,i)=>{
-        const d = document.createElement('div');
-        d.className = 'table-item';
-        const s = document.createElement('span'); s.textContent = n;
-        const cb = document.createElement('input');
-        cb.type = 'checkbox'; cb.value = n; cb.onchange = updateLoadBtn;
-        d.append(s, cb);
-        c.append(d);
+      const container = document.getElementById('tablesList');
+      container.innerHTML = '';
+      
+      if(tables.length === 0) {
+        container.innerHTML = '<div class="table-item">No se encontraron tablas</div>';
+        return;
+      }
+      
+      tables.forEach((name, index) => {
+        const item = document.createElement('div');
+        item.className = 'table-item';
+        
+        const span = document.createElement('span');
+        span.textContent = name;
+        
+        const checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        checkbox.value = name;
+        checkbox.onchange = updateLoadBtn;
+        
+        item.append(span, checkbox);
+        container.append(item);
+      });
+    }
+
+    function populateDownloadSelect(tables) {
+      const select = document.getElementById('downloadSelect');
+      select.innerHTML = '';
+      
+      if(tables.length === 0) {
+        select.disabled = true;
+        select.innerHTML = '<option value="">No hay tablas disponibles</option>';
+        return;
+      }
+      
+      select.disabled = false;
+      select.innerHTML = '<option value="">Selecciona una capa</option>';
+      
+      tables.forEach(table => {
+        const option = document.createElement('option');
+        option.value = table;
+        option.textContent = table;
+        select.appendChild(option);
+      });
+      
+      // Habilitar botones de descarga cuando se selecciona una opción
+      select.addEventListener('change', function() {
+        const buttons = ['downloadGeoJSON', 'downloadCSV', 'downloadKML', 'downloadSHP'];
+        buttons.forEach(id => {
+          document.getElementById(id).disabled = !this.value;
+        });
       });
     }
 
     function updateLoadBtn(){
-      const any = Array.from(document.querySelectorAll('#tablesList input')).some(cb=>cb.checked);
-      document.getElementById('loadLayerBtn').disabled = !any;
+      const anyChecked = Array.from(document.querySelectorAll('#tablesList input')).some(cb => cb.checked);
+      document.getElementById('loadLayerBtn').disabled = !anyChecked;
     }
 
     async function loadLayers(){
-      const sel = Array.from(document.querySelectorAll('#tablesList input:checked')).map(cb=>cb.value);
-      if(!sel.length||!supabaseClient) return;
-      for(const [idx,name] of sel.map((n,i)=>[i,n])){
-        if(vectorLayers[name]) continue;
-        const {data, error} = await supabaseClient.from(name).select('*').limit(500);
-        if(error) { console.error(error); continue; }
-        const feats = data.map(r=>{
-          const k = Object.keys(r).find(k=>/geom|geometry/i.test(k));
-          if(!k) return null;
-          const geom = typeof r[k]==='string'? JSON.parse(r[k]):r[k];
-          if(!geom) return null;
-          const props = {...r}; delete props[k];
-          return {type:'Feature',properties:props,geometry:geom};
-        }).filter(Boolean);
-
-        const col = colors[idx % colors.length];
-        const layer = L.geoJSON({type:'FeatureCollection',features:feats}, {
-          style:()=>({color:col,weight:3,opacity:0.7,fillOpacity:0.2}),
-          pointToLayer:(f,latlng)=>L.circleMarker(latlng,{radius:7,fillColor:col,color:'#fff',weight:1.5,fillOpacity:0.8}),
-          onEachFeature:(f,l)=>l.bindPopup(Object.entries(f.properties)
-            .map(([k,v])=>`<b>${k}:</b> ${v}`).join('<br/>'))
-        });
-
-        vectorLayers[name] = layer;
-        layer.addTo(map);
-        layerControl.addOverlay(layer, name);
-        try { map.fitBounds(layer.getBounds(),{padding:[20,20]}); } catch(e){}
+      const selected = Array.from(document.querySelectorAll('#tablesList input:checked')).map(cb => cb.value);
+      
+      if(!selected.length || !supabaseClient) {
+        showNotification('Selecciona al menos una capa para cargar', 'warning');
+        return;
       }
+      
+      showNotification(`Cargando ${selected.length} capa(s)...`);
+      
+      for(const [index, name] of selected.map((n, i) => [i, n])) {
+        if(vectorLayers[name]) continue;
+        
+        try {
+          const {data, error} = await supabaseClient.from(name).select('*').limit(500);
+          
+          if(error) {
+            console.error(error);
+            showNotification(`Error al cargar ${name}: ${error.message}`, 'error');
+            continue;
+          }
+          
+          const features = data.map(row => {
+            const geomKey = Object.keys(row).find(k => /geom|geometry/i.test(k));
+            if(!geomKey) return null;
+            
+            const geometry = typeof row[geomKey] === 'string' ? JSON.parse(row[geomKey]) : row[geomKey];
+            if(!geometry) return null;
+            
+            const properties = {...row};
+            delete properties[geomKey];
+            
+            return {
+              type: 'Feature',
+              properties: properties,
+              geometry: geometry
+            };
+          }).filter(Boolean);
+
+          const color = colors[index % colors.length];
+          
+          const layer = L.geoJSON({
+            type: 'FeatureCollection',
+            features: features
+          }, {
+            style: () => ({
+              color: color,
+              weight: 3,
+              opacity: 0.7,
+              fillOpacity: 0.2,
+              fillColor: color
+            }),
+            pointToLayer: (feature, latlng) => L.circleMarker(latlng, {
+              radius: 7,
+              fillColor: color,
+              color: '#fff',
+              weight: 1.5,
+              fillOpacity: 0.8
+            }),
+            onEachFeature: (feature, layer) => {
+              layer.bindPopup(
+                Object.entries(feature.properties)
+                  .map(([key, value]) => `<b>${key}:</b> ${value}`)
+                  .join('<br/>')
+              );
+            }
+          });
+
+          vectorLayers[name] = layer;
+          layer.addTo(map);
+          layerControl.addOverlay(layer, name);
+          
+          try {
+            map.fitBounds(layer.getBounds(), {padding: [20, 20]});
+          } catch(e) {
+            console.warn('Could not fit bounds for layer:', name);
+          }
+        } catch(e) {
+          console.error('Error loading layer:', name, e);
+          showNotification(`Error al cargar ${name}: ${e.message}`, 'error');
+        }
+      }
+      
       calculateMeasurements();
+      showNotification('Capas cargadas exitosamente');
+    }
+
+    async function searchTables() {
+      const query = document.getElementById('searchInput').value.trim();
+      const resultsContainer = document.getElementById('searchResultsList');
+      
+      if(!query) {
+        resultsContainer.innerHTML = 'Ingresa un término de búsqueda';
+        document.getElementById('loadSearchResultBtn').disabled = true;
+        return;
+      }
+      
+      if(!supabaseClient) {
+        resultsContainer.innerHTML = 'Conéctate primero a Supabase';
+        document.getElementById('loadSearchResultBtn').disabled = true;
+        return;
+      }
+      
+      try {
+        const {data, error} = await supabaseClient.rpc('list_tables');
+        
+        if(error) throw error;
+        if(!data?.length) throw new Error('No se encontraron tablas');
+        
+        const filtered = data
+          .map(t => t.name)
+          .filter(name => name.toLowerCase().includes(query.toLowerCase()));
+        
+        resultsContainer.innerHTML = '';
+        
+        if(filtered.length === 0) {
+          resultsContainer.innerHTML = '<div class="search-result-item">No se encontraron resultados</div>';
+          document.getElementById('loadSearchResultBtn').disabled = true;
+        } else {
+          filtered.forEach(table => {
+            const item = document.createElement('div');
+            item.className = 'search-result-item';
+            
+            const span = document.createElement('span');
+            span.textContent = table;
+            
+            const checkbox = document.createElement('input');
+            checkbox.type = 'checkbox';
+            checkbox.value = table;
+            checkbox.onchange = () => {
+              const anyChecked = Array.from(resultsContainer.querySelectorAll('input')).some(cb => cb.checked);
+              document.getElementById('loadSearchResultBtn').disabled = !anyChecked;
+            };
+            
+            item.append(span, checkbox);
+            resultsContainer.append(item);
+          });
+        }
+      } catch(e) {
+        resultsContainer.innerHTML = `<div class="search-result-item">Error: ${e.message}</div>`;
+        document.getElementById('loadSearchResultBtn').disabled = true;
+      }
+    }
+
+    function loadSearchResults() {
+      const resultsContainer = document.getElementById('searchResultsList');
+      const checkboxes = resultsContainer.querySelectorAll('input:checked');
+      
+      if(checkboxes.length === 0) {
+        showNotification('Selecciona al menos una capa para cargar', 'warning');
+        return;
+      }
+      
+      // Marcar las tablas seleccionadas en la pestaña de tablas
+      const tablesContainer = document.getElementById('tablesList');
+      Array.from(tablesContainer.querySelectorAll('input')).forEach(cb => {
+        cb.checked = Array.from(checkboxes).some(checkedCb => checkedCb.value === cb.value);
+      });
+      
+      updateLoadBtn();
+      loadLayers();
     }
 
     function calculateMeasurements(){
-      const out = [];
+      const output = [];
+      
       // Incluimos también los dibujos manuales (drawnItems)
       const layersToMeasure = {...vectorLayers};
-      if(drawnItems.getLayers().length > 0){
+      if(drawnItems.getLayers().length > 0) {
         layersToMeasure['Dibujos'] = drawnItems;
       }
+      
+      if(measureLayer.getLayers().length > 0) {
+        layersToMeasure['Mediciones'] = measureLayer;
+      }
 
-      for(const [name, layer] of Object.entries(layersToMeasure)){
+      for(const [name, layer] of Object.entries(layersToMeasure)) {
         if(!map.hasLayer(layer)) continue;
-        let area=0, length=0, points=0;
+        
+        let area = 0, length = 0, points = 0;
         const seen = new Set();
-        layer.toGeoJSON().features.forEach(f=>{
-          const id = JSON.stringify(f.geometry)+JSON.stringify(f.properties);
+        
+        layer.toGeoJSON().features.forEach(feature => {
+          const id = JSON.stringify(feature.geometry) + JSON.stringify(feature.properties);
           if(seen.has(id)) return;
           seen.add(id);
-          try{
-            const t = f.geometry.type;
-            if(/Polygon/i.test(t)){ area+=turf.area(f); length+=turf.length(f,{units:'meters'}); }
-            else if(/LineString/i.test(t)){ length+=turf.length(f,{units:'meters'}); }
-            else if(/Point/i.test(t)){ points+= t==='Point'?1:f.geometry.coordinates.length; }
-          }catch{}
+          
+          try {
+            const type = feature.geometry.type;
+            
+            if(/Polygon/i.test(type)) {
+              area += turf.area(feature);
+              length += turf.length(feature, {units: 'meters'});
+            } else if(/LineString/i.test(type)) {
+              length += turf.length(feature, {units: 'meters'});
+            } else if(/Point/i.test(type)) {
+              points += type === 'Point' ? 1 : feature.geometry.coordinates.length;
+            }
+          } catch(e) {
+            console.warn('Error calculating measurements:', e);
+          }
         });
-        if(points) out.push(`Puntos: ${points}  [${name}]`);
-        if(area) out.push(`${area >= 1e6 ? (area/1e6).toFixed(3)+' km²' : area.toFixed(1)+' m²'}  [${name}]`);
-        if(length) out.push(`${length>=1000 ? (length/1000).toFixed(3)+' km' : length.toFixed(1)+' m'}  [${name}]`);
+        
+        if(points) output.push(`• Puntos: ${points}  [${name}]`);
+        if(area) output.push(`• Área: ${area >= 1e6 ? (area/1e6).toFixed(3)+' km²' : area.toFixed(1)+' m²'}  [${name}]`);
+        if(length) output.push(`• Longitud: ${length >= 1000 ? (length/1000).toFixed(3)+' km' : length.toFixed(1)+' m'}  [${name}]`);
       }
-      document.getElementById('measurementsOutput').textContent = out.join('\n') || 'No hay capas visibles.';
+      
+      document.getElementById('measurementsOutput').textContent = 
+        output.join('\n') || 'No hay capas visibles con geometrías medibles.';
     }
 
-    document.getElementById('connectBtn').addEventListener('click', connectSupabase);
-    document.getElementById('loadLayerBtn').addEventListener('click', loadLayers);
-    document.querySelectorAll('.tab').forEach(t=>t.addEventListener('click',()=>{
-      document.querySelectorAll('.tab,.tab-content').forEach(e=>e.classList.remove('active'));
-      t.classList.add('active');
-      document.getElementById(t.dataset.tab).classList.add('active');
-    }));
+    function initMeasureTool(type) {
+      // Limpiar mediciones anteriores si estamos cambiando de herramienta
+      if(currentMeasureTool !== type) {
+        measureLayer.clearLayers();
+      }
+      
+      currentMeasureTool = type;
+      document.getElementById('currentMeasurement').style.display = 'block';
+      
+      // Deshabilitar otros controles de dibujo
+      if(map._drawToolbar) {
+        map._drawToolbar.disable();
+      }
+      
+      let options = {
+        shapeOptions: {
+          color: '#4361ee',
+          weight: 3,
+          fillOpacity: 0.3,
+          dashArray: '5, 5'
+        },
+        showArea: true,
+        metric: true,
+        feet: false,
+        nautic: false
+      };
+      
+      if(type === 'polygon') {
+        options.shapeOptions.fillColor = '#4361ee';
+        measureControl = new L.Draw.Polygon(map, options);
+      } else if(type === 'line') {
+        measureControl = new L.Draw.Polyline(map, options);
+      }
+      
+      measureControl.enable();
+      
+      // Evento para mostrar medición en tiempo real
+      map.on('draw:drawvertex', updateCurrentMeasurement);
+      map.on('draw:editvertex', updateCurrentMeasurement);
+      
+      map.on('draw:created', e => {
+        const layer = e.layer;
+        measureLayer.addLayer(layer);
+        calculateMeasurements();
+        updateCurrentMeasurement();
+      });
+      
+      map.on('draw:drawstop', () => {
+        document.getElementById('currentMeasurement').style.display = 'none';
+        map.off('draw:drawvertex', updateCurrentMeasurement);
+        map.off('draw:editvertex', updateCurrentMeasurement);
+      });
+    }
+    
+    function updateCurrentMeasurement() {
+      if(!currentMeasureTool) return;
+      
+      const layers = measureLayer.getLayers();
+      if(layers.length === 0) return;
+      
+      const lastLayer = layers[layers.length - 1];
+      const geojson = lastLayer.toGeoJSON();
+      let measurement = 0;
+      let unit = '';
+      
+      try {
+        if(currentMeasureTool === 'polygon') {
+          measurement = turf.area(geojson);
+          unit = measurement >= 1e6 ? 'km²' : 'm²';
+          measurement = measurement >= 1e6 ? (measurement / 1e6).toFixed(3) : measurement.toFixed(1);
+        } else if(currentMeasureTool === 'line') {
+          measurement = turf.length(geojson, {units: 'meters'});
+          unit = measurement >= 1000 ? 'km' : 'm';
+          measurement = measurement >= 1000 ? (measurement / 1000).toFixed(3) : measurement.toFixed(1);
+        }
+        
+        document.getElementById('measurementValue').textContent = `${measurement} ${unit}`;
+      } catch(e) {
+        console.warn('Error updating measurement:', e);
+      }
+    }
 
+    function addReport() {
+      const title = document.getElementById('reportTitle').value.trim();
+      const description = document.getElementById('reportDescription').value.trim();
+      const status = document.getElementById('reportStatus').value;
+      
+      if(!title || !description) {
+        showNotification('Título y descripción son requeridos', 'error');
+        return;
+      }
+      
+      const newReport = {
+        id: Date.now(),
+        title: title,
+        description: description,
+        status: status,
+        date: new Date().toLocaleString(),
+        coordinates: map.getCenter()
+      };
+      
+      reports.unshift(newReport);
+      saveReports();
+      updateReportsList();
+      
+      // Limpiar formulario
+      document.getElementById('reportTitle').value = '';
+      document.getElementById('reportDescription').value = '';
+      document.getElementById('reportStatus').value = 'pending';
+      
+      showNotification('Reporte agregado exitosamente');
+    }
+
+    function saveReports() {
+      localStorage.setItem('reports', JSON.stringify(reports));
+    }
+
+    function updateReportsList() {
+      const container = document.getElementById('reportsList');
+      container.innerHTML = '';
+      
+      if(reports.length === 0) {
+        container.innerHTML = '<div class="report-item">No hay reportes registrados</div>';
+        return;
+      }
+      
+      reports.forEach(report => {
+        const item = document.createElement('div');
+        item.className = 'report-item';
+        
+        const statusClass = {
+          'pending': 'status-pending',
+          'in_progress': 'status-in-progress',
+          'solved': 'status-solved'
+        }[report.status];
+        
+        const statusText = {
+          'pending': 'Pendiente',
+          'in_progress': 'En Proceso',
+          'solved': 'Solucionado'
+        }[report.status];
+        
+        item.innerHTML = `
+          <div>
+            <strong>${report.title}</strong>
+            <div style="font-size:13px;color:#6c757d;margin-top:4px;">${report.description.substring(0, 50)}${report.description.length > 50 ? '...' : ''}</div>
+            <div style="font-size:12px;margin-top:6px;">${report.date}</div>
+          </div>
+          <span class="report-status ${statusClass}">${statusText}</span>
+        `;
+        
+        item.addEventListener('click', () => openReportModal(report.id));
+        container.appendChild(item);
+      });
+    }
+
+    function openReportModal(reportId) {
+      const report = reports.find(r => r.id === reportId);
+      if(!report) return;
+      
+      currentReportId = reportId;
+      
+      document.getElementById('modalReportTitle').textContent = report.title;
+      document.getElementById('modalReportDescription').textContent = report.description;
+      document.getElementById('modalReportDate').textContent = report.date;
+      
+      const statusElement = document.getElementById('modalReportStatus');
+      statusElement.textContent = {
+        'pending': 'Pendiente',
+        'in_progress': 'En Proceso',
+        'solved': 'Solucionado'
+      }[report.status];
+      
+      statusElement.className = '';
+      statusElement.classList.add({
+        'pending': 'status-pending',
+        'in_progress': 'status-in-progress',
+        'solved': 'status-solved'
+      }[report.status]);
+      
+      // Centrar el mapa en las coordenadas del reporte si existen
+      if(report.coordinates) {
+        map.setView(report.coordinates, 15);
+      }
+      
+      document.getElementById('reportModal').style.display = 'flex';
+    }
+
+    function closeReportModal() {
+      document.getElementById('reportModal').style.display = 'none';
+      currentReportId = null;
+    }
+
+    function editReport() {
+      if(!currentReportId) return;
+      
+      const reportIndex = reports.findIndex(r => r.id === currentReportId);
+      if(reportIndex === -1) return;
+      
+      const newTitle = prompt('Editar título:', reports[reportIndex].title);
+      if(newTitle === null) return;
+      
+      const newDescription = prompt('Editar descripción:', reports[reportIndex].description);
+      if(newDescription === null) return;
+      
+      const newStatus = prompt('Editar estado (pending, in_progress, solved):', reports[reportIndex].status);
+      if(!newStatus || !['pending', 'in_progress', 'solved'].includes(newStatus)) return;
+      
+      reports[reportIndex] = {
+        ...reports[reportIndex],
+        title: newTitle,
+        description: newDescription,
+        status: newStatus
+      };
+      
+      saveReports();
+      updateReportsList();
+      closeReportModal();
+      showNotification('Reporte actualizado exitosamente');
+    }
+
+    function deleteReport() {
+      if(!currentReportId) return;
+      
+      if(!confirm('¿Estás seguro de eliminar este reporte?')) return;
+      
+      reports = reports.filter(r => r.id !== currentReportId);
+      saveReports();
+      updateReportsList();
+      closeReportModal();
+      showNotification('Reporte eliminado exitosamente');
+    }
+
+    async function downloadLayer(format) {
+      const tableName = document.getElementById('downloadSelect').value;
+      const coordinateSystem = document.querySelector('input[name="coordinateSystem"]:checked').value;
+      
+      if(!tableName || !supabaseClient) {
+        showNotification('Selecciona una capa válida', 'error');
+        return;
+      }
+      
+      try {
+        showNotification(`Preparando descarga de ${tableName}...`);
+        
+        const {data, error} = await supabaseClient.from(tableName).select('*');
+        
+        if(error) throw error;
+        if(!data?.length) throw new Error('La tabla está vacía');
+        
+        const geomKey = Object.keys(data[0]).find(k => /geom|geometry/i.test(k));
+        if(!geomKey) throw new Error('No se encontró geometría en la tabla');
+        
+        let features = data.map(row => {
+          const geometry = typeof row[geomKey] === 'string' ? JSON.parse(row[geomKey]) : row[geomKey];
+          const properties = {...row};
+          delete properties[geomKey];
+          
+          return {
+            type: 'Feature',
+            properties: properties,
+            geometry: geometry
+          };
+        });
+        
+        const featureCollection = {
+          type: 'FeatureCollection',
+          features: features
+        };
+        
+        if(format === 'geojson') {
+          const content = JSON.stringify(featureCollection, null, 2);
+          const fileName = `${tableName}_${coordinateSystem}.geojson`;
+          saveAs(new Blob([content], {type: 'application/geo+json'}), fileName);
+        } 
+        else if(format === 'csv') {
+          // Convertir a CSV simple (sin geometría)
+          const headers = Object.keys(features[0].properties);
+          const rows = features.map(f => 
+            headers.map(h => `"${String(f.properties[h]).replace(/"/g, '""')}"`).join(',')
+          );
+          
+          const content = [headers.join(','), ...rows].join('\n');
+          const fileName = `${tableName}.csv`;
+          saveAs(new Blob([content], {type: 'text/csv'}), fileName);
+        } 
+        else if(format === 'kml') {
+          // Convertir a KML compatible con Google Earth
+          let kml = `<?xml version="1.0" encoding="UTF-8"?>
+<kml xmlns="http://www.opengis.net/kml/2.2">
+  <Document>
+    <name>${tableName}</name>
+    <open>1</open>`;
+          
+          features.forEach(feature => {
+            const props = Object.entries(feature.properties)
+              .map(([key, value]) => `        <Data name="${key}"><value>${value}</value></Data>`)
+              .join('\n');
+            
+            kml += `
+    <Placemark>
+      <ExtendedData>
+${props}
+      </ExtendedData>
+      ${geometryToKML(feature.geometry)}
+    </Placemark>`;
+          });
+          
+          kml += `
+  </Document>
+</kml>`;
+          
+          const fileName = `${tableName}_${coordinateSystem}.kml`;
+          saveAs(new Blob([kml], {type: 'application/vnd.google-earth.kml+xml'}), fileName);
+        }
+        else if(format === 'shp') {
+          // Preparar datos para Shapefile
+          const geojson = {
+            type: 'FeatureCollection',
+            features: features.map(feature => {
+              // Convertir geometría al formato esperado por shpwrite
+              let geometry = feature.geometry;
+              
+              // Shapefile espera coordenadas en el orden [longitud, latitud] (x,y)
+              if (geometry.type === 'Point') {
+                geometry.coordinates = [geometry.coordinates[0], geometry.coordinates[1]];
+              } else if (geometry.type === 'LineString' || geometry.type === 'MultiPoint') {
+                geometry.coordinates = geometry.coordinates.map(coord => [coord[0], coord[1]]);
+              } else if (geometry.type === 'Polygon' || geometry.type === 'MultiLineString') {
+                geometry.coordinates = geometry.coordinates.map(ring => 
+                  ring.map(coord => [coord[0], coord[1]])
+                );
+              } else if (geometry.type === 'MultiPolygon') {
+                geometry.coordinates = geometry.coordinates.map(polygon => 
+                  polygon.map(ring => 
+                    ring.map(coord => [coord[0], coord[1]])
+                  )
+                );
+              }
+              
+              return {
+                type: 'Feature',
+                properties: feature.properties,
+                geometry: geometry
+              };
+            })
+          };
+          
+          // Generar el Shapefile usando JSZip (solución alternativa)
+          try {
+            const zip = new JSZip();
+            const shpData = shpwrite.zip(geojson);
+            
+            // Convertir el resultado de shpwrite a Blob
+            const blob = new Blob([shpData], {type: 'application/zip'});
+            const fileName = `${tableName}_${coordinateSystem}.zip`;
+            
+            saveAs(blob, fileName);
+          } catch(e) {
+            console.error('Error generating Shapefile:', e);
+            throw new Error('Error al generar Shapefile. Asegúrate que los datos geométricos son válidos.');
+          }
+        }
+        
+        showNotification(`Descarga de ${tableName} completada`);
+      } catch(e) {
+        console.error('Download error:', e);
+        showNotification(`Error al descargar: ${e.message}`, 'error');
+      }
+    }
+
+    function geometryToKML(geometry) {
+      // Conversión mejorada de geometría a KML
+      switch(geometry.type) {
+        case 'Point':
+          return `<Point><coordinates>${geometry.coordinates[0]},${geometry.coordinates[1]}</coordinates></Point>`;
+        case 'LineString':
+          return `<LineString><coordinates>${
+            geometry.coordinates.map(c => `${c[0]},${c[1]}`).join(' ')
+          }</coordinates></LineString>`;
+        case 'Polygon':
+          return `<Polygon><outerBoundaryIs><LinearRing><coordinates>${
+            geometry.coordinates[0].map(c => `${c[0]},${c[1]}`).join(' ')
+          }</coordinates></LinearRing></outerBoundaryIs></Polygon>`;
+        case 'MultiPoint':
+          return `<MultiGeometry>${
+            geometry.coordinates.map(c => 
+              `<Point><coordinates>${c[0]},${c[1]}</coordinates></Point>`
+            ).join('')
+          }</MultiGeometry>`;
+        case 'MultiLineString':
+          return `<MultiGeometry>${
+            geometry.coordinates.map(ls => 
+              `<LineString><coordinates>${
+                ls.map(c => `${c[0]},${c[1]}`).join(' ')
+              }</coordinates></LineString>`
+            ).join('')
+          }</MultiGeometry>`;
+        case 'MultiPolygon':
+          return `<MultiGeometry>${
+            geometry.coordinates.map(poly => 
+              `<Polygon><outerBoundaryIs><LinearRing><coordinates>${
+                poly[0].map(c => `${c[0]},${c[1]}`).join(' ')
+              }</coordinates></LinearRing></outerBoundaryIs></Polygon>`
+            ).join('')
+          }</MultiGeometry>`;
+        default:
+          return '';
+      }
+    }
+
+    // Event listeners
+    document.getElementById('loadLayerBtn').addEventListener('click', loadLayers);
+    document.getElementById('searchBtn').addEventListener('click', searchTables);
+    document.getElementById('loadSearchResultBtn').addEventListener('click', loadSearchResults);
+    
+    document.getElementById('measurePolygonBtn').addEventListener('click', () => initMeasureTool('polygon'));
+    document.getElementById('measureLineBtn').addEventListener('click', () => initMeasureTool('line'));
+    document.getElementById('clearMeasurementsBtn').addEventListener('click', () => {
+      measureLayer.clearLayers();
+      document.getElementById('currentMeasurement').style.display = 'none';
+      calculateMeasurements();
+      showNotification('Mediciones limpiadas');
+    });
+    
+    document.getElementById('addReportBtn').addEventListener('click', addReport);
+    document.querySelector('.close-modal').addEventListener('click', closeReportModal);
+    document.getElementById('editReportBtn').addEventListener('click', editReport);
+    document.getElementById('deleteReportBtn').addEventListener('click', deleteReport);
+    
+    document.getElementById('downloadGeoJSON').addEventListener('click', () => downloadLayer('geojson'));
+    document.getElementById('downloadCSV').addEventListener('click', () => downloadLayer('csv'));
+    document.getElementById('downloadKML').addEventListener('click', () => downloadLayer('kml'));
+    document.getElementById('downloadSHP').addEventListener('click', () => downloadLayer('shp'));
+    
+    document.querySelectorAll('.tab').forEach(tab => {
+      tab.addEventListener('click', () => {
+        document.querySelectorAll('.tab, .tab-content').forEach(el => el.classList.remove('active'));
+        tab.classList.add('active');
+        document.getElementById(tab.dataset.tab).classList.add('active');
+        
+        // Si es la pestaña de reportes, actualizar la lista
+        if(tab.dataset.tab === 'reports') {
+          updateReportsList();
+        }
+      });
+    });
+
+    // Inicialización
     initMap();
+    
+    // Conectar automáticamente al cargar la página
+    document.addEventListener('DOMContentLoaded', () => {
+      connectSupabase();
+    });
+    
+    // Actualizar lista de reportes al inicio
+    updateReportsList();
   </script>
 </body>
 </html>
+
